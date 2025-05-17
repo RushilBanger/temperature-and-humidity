@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Smart Temperature & Humidity Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #121212;
+      color: #ffffff;
+      text-align: center;
+      padding: 20px;
+    }
+    h1 {
+      margin-bottom: 20px;
+    }
+    .dashboard {
+      display: flex;
+      justify-content: center;
+      gap: 50px;
+      flex-wrap: wrap;
+    }
+    .gauge-container {
+      background: #1e1e1e;
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    }
+    canvas {
+      width: 250px;
+      height: 250px;
+    }
+    .alert {
+      color: #ff1744;
+      font-size: 1.5rem;
+      margin-top: 20px;
+      animation: blink 1s infinite;
+      display: none;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<h1>Temperature & Humidity Dashboard</h1>
+
+<div class="dashboard">
+  <div class="gauge-container">
+    <canvas id="tempGauge"></canvas>
+    <p id="tempLabel">-- °C</p>
+  </div>
+  <div class="gauge-container">
+    <canvas id="humGauge"></canvas>
+    <p id="humLabel">-- %</p>
+  </div>
+</div>
+
+<p id="highTempAlert" class="alert">🚨 High Temperature Alert!</p>
+
+<script>
+  const tempCtx = document.getElementById('tempGauge').getContext('2d');
+  const tempGauge = new Chart(tempCtx, {
+    type: 'doughnut',
+    data: {
+      datasets: [{
+        data: [0, 100],
+        backgroundColor: ['#ff5722', '#333'],
+        cutout: '70%'
+      }]
+    },
+    options: { plugins: { tooltip: { enabled: false }, legend: { display: false } } }
+  });
+
+  const humCtx = document.getElementById('humGauge').getContext('2d');
+  const humGauge = new Chart(humCtx, {
+    type: 'doughnut',
+    data: {
+      datasets: [{
+        data: [0, 100],
+        backgroundColor: ['#03a9f4', '#333'],
+        cutout: '70%'
+      }]
+    },
+    options: { plugins: { tooltip: { enabled: false }, legend: { display: false } } }
+  });
+
+  async function fetchData() {
+    try {
+      const res = await fetch('/api/latest');
+      const data = await res.json();
+
+      tempGauge.data.datasets[0].data = [data.temperature, 100 - data.temperature];
+      humGauge.data.datasets[0].data = [data.humidity, 100 - data.humidity];
+
+      tempGauge.update();
+      humGauge.update();
+
+      document.getElementById('tempLabel').innerText = data.temperature + " °C";
+      document.getElementById('humLabel').innerText = data.humidity + " %";
+
+      if (data.temperature >= 30) {
+        document.getElementById('highTempAlert').style.display = 'block';
+      } else {
+        document.getElementById('highTempAlert').style.display = 'none';
+      }
+    } catch (e) {
+      console.error("Error fetching data:", e);
+    }
+  }
+
+  setInterval(fetchData, 5000);
+  fetchData();
+</script>
+
+</body>
+</html>
